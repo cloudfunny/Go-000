@@ -75,3 +75,20 @@ func main() {
 	fmt.Printf("errgroup exiting: %+v\n", g.Wait())
 }
 ```
+
+## 评价记录
+上版本助教老师的评语:
+
+对errgroup的理解都稍微有一点问题。
+
+1.使用errgroup就不需要再自己cancel了
+
+me: 这个不是理解问题，这个在第一个版本是有意这么用的，这样可以在捕获到信号之后优雅退出两个 http server
+
+2.你的信号处理代码没有作为一个单独的goroutine放到errgroup中，如果ListenAndServe出错异常退出，你的进程将不能正常退出;
+
+me: 这个的确是有问题的, 没有考虑到
+
+3.你的Shutdown协程没有放到errgroup中，这会导致errgroup.Wait不会等它，最终导致已经连接的请求可能无法在进程退出前合适得处理完
+
+me: 偷懒了，翻了一下源码发现，如果没有超时控制会导致shutdown立即退出
