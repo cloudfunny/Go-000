@@ -57,6 +57,7 @@ func main() {
 		}
 
 		timeoutCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		// 这里不是必须的，但是如果使用 _ 的话静态扫描工具会报错，加上也无伤大雅
 		defer cancel()
 
 		log.Println("shutting down server...")
