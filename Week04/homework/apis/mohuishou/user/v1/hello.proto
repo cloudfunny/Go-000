@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package mohuishou.user.v1;
+option go_package = "github.com/mohuishou/go-training/Week04/homework/apis/mohuishou/user/v1";
+
+service UserServer {
+  rpc GetUserInfo(GetUserInfoRequest) returns (GetUserInfoResponse){}
+}
+
+message GetUserInfoRequest{
+}
+
+message GetUserInfoResponse{
+  string username = 1;
+  string city = 2;
+}
+
