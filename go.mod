@@ -15,6 +15,7 @@ require (
 	github.com/modern-go/reflect2 v1.0.1 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/viper v1.7.1
+	github.com/stretchr/testify v1.6.1
 	github.com/ugorji/go v1.2.0 // indirect
 	golang.org/x/crypto v0.0.0-20201124201722-c8d3bf9c5392 // indirect
 	golang.org/x/sync v0.0.0-20201207232520-09787c993a3a
