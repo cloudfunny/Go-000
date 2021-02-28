@@ -1,3 +1,4 @@
 test.db
 *.o
 *.s
+.idea
