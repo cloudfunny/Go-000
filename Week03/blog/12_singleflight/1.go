@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -22,12 +23,19 @@ func main() {
 		n   = 1000
 		sg  = &singleflight.Group{}
 	)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
 
 	for i := 0; i < n; i++ {
 		wg.Add(1)
+
 		go func() {
-			// res, _ := singleflightGetArticle(sg, 1)
-			res, _ := getArticle(1)
+			res, err := singleflightGetArticle(ctx, sg, 1)
+			// res, _ := getArticle(1)
+			if err != nil {
+				panic(err)
+			}
+
 			if res != "article: 1" {
 				panic("err")
 			}
@@ -40,18 +48,25 @@ func main() {
 
 }
 
-func singleflightGetArticle(sg *singleflight.Group, id int) (string, error) {
-	v, err, _ := sg.Do(fmt.Sprintf("%d", id), func() (interface{}, error) {
+func singleflightGetArticle(ctx context.Context, sg *singleflight.Group, id int) (string, error) {
+	result := sg.DoChan(fmt.Sprintf("%d", id), func() (interface{}, error) {
+		// 模拟出现问题，hang 住
+		select {}
 		return getArticle(id)
 	})
-
-	return v.(string), err
+	select {
+	case r := <-result:
+		return r.Val.(string), r.Err
+	case <-ctx.Done():
+		return "", ctx.Err()
+	}
 }
 
 func getArticle(id int) (article string, err error) {
 	// 假设这里会对数据库进行调用, 模拟不同并发下耗时不同
 	atomic.AddInt32(&count, 1)
 	time.Sleep(time.Duration(count) * time.Millisecond)
-
+	fmt.Println(count)
+	time.Sleep(1000 * time.Millisecond)
 	return fmt.Sprintf("article: %d", id), nil
 }
