@@ -29,7 +29,7 @@ func main() {
 	}()
 
 	go func() {
-		reporter.run(stop)
+		reporter.Run(stop)
 		done <- nil
 	}()
 
@@ -54,7 +54,7 @@ var reporter = NewReporter(3, 10)
 func app(stop <-chan struct{}) error {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
-		reporter.report("ping pong")
+		reporter.Report("ping pong")
 		w.Write([]byte("pong"))
 	})
 	return server(mux, ":8080", stop)

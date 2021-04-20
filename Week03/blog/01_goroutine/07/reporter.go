@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"sync"
-	"time"
 )
 
 // Reporter 埋点服务上报
@@ -11,43 +10,65 @@ type Reporter struct {
 	worker   int
 	messages chan string
 	wg       sync.WaitGroup
-	closed   bool
+	closed   chan struct{}
+	once     sync.Once
 }
 
 // NewReporter NewReporter
 func NewReporter(worker, buffer int) *Reporter {
-	return &Reporter{worker: worker, messages: make(chan string, buffer)}
+	return &Reporter{
+		worker:   worker,
+		messages: make(chan string, buffer),
+		closed:   make(chan struct{}),
+	}
 }
 
-func (r *Reporter) run(stop <-chan struct{}) {
+func (r *Reporter) Run(stop <-chan struct{}) {
 	go func() {
 		<-stop
+		fmt.Println("stop...")
 		r.shutdown()
 	}()
 
 	for i := 0; i < r.worker; i++ {
 		r.wg.Add(1)
 		go func() {
-			for msg := range r.messages {
-				time.Sleep(5 * time.Second)
-				fmt.Printf("report: %s\n", msg)
+			defer r.wg.Done()
+			for {
+				select {
+				case <-r.closed:
+					return
+				case msg := <-r.messages:
+					fmt.Printf("report: %s\n", msg)
+				}
 			}
-			r.wg.Done()
 		}()
 	}
 	r.wg.Wait()
+	fmt.Println("report workers exit...")
 }
 
+// 这里不必关闭 messages
+// 因为 closed 关闭之后，发送端会直接丢弃数据不再发送
+// Run 方法中的消费者也会退出
+// Run 方法会随之退出
 func (r *Reporter) shutdown() {
-	r.closed = true
-	// 注意，这个一定要在主服务结束之后再执行，避免关闭 channel 还有其他地方在啊写入
-	close(r.messages)
+	r.once.Do(func() { close(r.closed) })
 }
 
 // 模拟耗时
-func (r *Reporter) report(data string) {
-	if r.closed {
-		return
+func (r *Reporter) Report(data string) {
+	// 这个是为了及早退出
+	// 并且为了避免我们消费者能力很强，发送者这边一直不阻塞，可能还会一直写数据
+	select {
+	case <-r.closed:
+		fmt.Printf("reporter is closed, data will be discarded: %s \n", data)
+	default:
 	}
-	r.messages <- data
+
+	select {
+	case <-r.closed:
+		fmt.Printf("reporter is closed, data will be discarded: %s \n", data)
+	case r.messages <- data:
+	}
 }
